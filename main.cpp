@@ -134,6 +134,11 @@ public:
 		}
 		if (force_blit || detect_change)
 		{
+			if (!LayerClear(self, 0, 0, width, height))
+			{
+				TVPAddLog(TJS_W("krass: could not clear layer"));
+				return false;
+			}
 			blend_tree(buffer, pitch, ass_image);
 			if (!LayerUpdate(self, 0, 0, width, height))
 			{
@@ -294,6 +299,23 @@ private:
 		pitch = (long)lpitch;
 		ptr = reinterpret_cast<tjs_uint8*>(lptr);
 		return true;
+	}
+	static bool LayerClear(iTJSDispatch2 *lay, tjs_int64 left = 0, tjs_int64 top = 0, tjs_int64 width = 0, tjs_int64 height = 0)
+	{
+		if (!LayerClass) {
+			tTJSVariant var;
+			TVPExecuteExpression(TJS_W("Layer"), &var);
+			LayerClass = var.AsObjectNoAddRef();
+		}
+		tTJSVariant val[5];
+		tTJSVariant *pval[5] = { val, val + 1, val + 2, val + 3, val + 4 };
+		val[0] = left;
+		val[1] = top;
+		val[2] = width;
+		val[3] = height;
+		val[4] = 0;
+		static tjs_uint32 update_hint = 0;
+		return (TJS_SUCCEEDED(LayerClass->FuncCall(0, TJS_W("fillRect"), &update_hint, NULL, 5, pval, lay)));
 	}
 	static bool LayerUpdate(iTJSDispatch2 *lay, tjs_int64 left = 0, tjs_int64 top = 0, tjs_int64 width = 0, tjs_int64 height = 0)
 	{
