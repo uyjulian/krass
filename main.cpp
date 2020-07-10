@@ -151,7 +151,7 @@ public:
 
 	tTVInteger step_ass(tjs_int64 now, tjs_int64 movement)
 	{
-		if (!initialize_ass_renderer())
+		if (!initialize_ass_library())
 		{
 			return 0;
 		}
