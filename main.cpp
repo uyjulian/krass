@@ -125,13 +125,7 @@ public:
 			TVPAddLog(TJS_W("krass: could not render ass image"));
 			return false;
 		}
-		long pitch;
-		tjs_uint8* buffer;
-		if (!GetLayerImageForWrite(self, buffer, pitch))
-		{
-			TVPAddLog(TJS_W("krass: could not get layer buffer"));
-			return false;
-		}
+		tTVPRect rect = {0, 0, 0, 0};
 		if (force_blit || detect_change)
 		{
 			if (!LayerClear(self, 0, 0, width, height))
@@ -139,8 +133,15 @@ public:
 				TVPAddLog(TJS_W("krass: could not clear layer"));
 				return false;
 			}
-			blend_tree(buffer, pitch, ass_image);
-			if (!LayerUpdate(self, 0, 0, width, height))
+			long pitch;
+			tjs_uint8* buffer;
+			if (!GetLayerImageForWrite(self, buffer, pitch))
+			{
+				TVPAddLog(TJS_W("krass: could not get layer buffer"));
+				return false;
+			}
+			blend_tree(buffer, pitch, ass_image, &rect);
+			if (!LayerUpdate(self, rect.left, rect.top, rect.get_width(), rect.get_height()))
 			{
 				TVPAddLog(TJS_W("krass: could not update layer"));
 				return false;
@@ -210,8 +211,15 @@ private:
 #define _b(c) (((c)>>8)&0xFF)
 #define _a(c) ((c)&0xFF)
 
-	void blend_single(tjs_uint8* buffer, long pitch, ASS_Image *img)
+	void blend_single(tjs_uint8* buffer, long pitch, ASS_Image *img, tTVPRect *rect)
 	{
+		tTVPRect container_rect;
+		container_rect.left = img->dst_x;
+		container_rect.top = img->dst_y;
+		container_rect.set_width(img->w);
+		container_rect.set_height(img->h);
+		rect->do_union(container_rect);
+
 		tjs_uint8 opacity = 255 - _a(img->color);
 		tjs_uint8 r = _r(img->color);
 		tjs_uint8 g = _g(img->color);
@@ -237,12 +245,12 @@ private:
 		}
 	}
 
-	void blend_tree(tjs_uint8* buffer, long pitch, ASS_Image *img)
+	void blend_tree(tjs_uint8* buffer, long pitch, ASS_Image *img, tTVPRect *rect)
 	{
 		int cnt = 0;
 		while (img)
 		{
-			blend_single(buffer, pitch, img);
+			blend_single(buffer, pitch, img, rect);
 			cnt += 1;
 			img = img->next;
 		}
