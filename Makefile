@@ -49,6 +49,9 @@ archive: $(ARCHIVE)
 
 clean:
 	rm -f $(OBJECTS) $(BINARY) $(ARCHIVE)
+	$(MAKE) -C external/fribidi clean
+	$(MAKE) -C external/freetype2 clean
+	$(MAKE) -C external/libass clean
 
 $(DEPENDENCY_OUTPUT_DIRECTORY):
 	mkdir $(DEPENDENCY_OUTPUT_DIRECTORY)
@@ -62,6 +65,7 @@ $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libfribidi.a: external/fribidi/configure $(DE
 	cd external/fribidi && \
 	PKG_CONFIG_PATH=$(DEPENDENCY_OUTPUT_DIRECTORY)/lib/pkgconfig \
 	./configure \
+		CFLAGS="-O2" \
 		--prefix="$(DEPENDENCY_OUTPUT_DIRECTORY)" \
 		--host=i686-w64-mingw32 \
 		--enable-static \
@@ -78,6 +82,7 @@ $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libfreetype.a: $(DEPENDENCY_OUTPUT_DIRECTORY)
 	NOCONFIGURE=1 ./autogen.sh && \
 	PKG_CONFIG_PATH=$(DEPENDENCY_OUTPUT_DIRECTORY)/lib/pkgconfig \
 	./configure \
+		CFLAGS="-O2" \
 		--prefix="$(DEPENDENCY_OUTPUT_DIRECTORY)" \
 		--host=i686-w64-mingw32 \
 		--enable-static \
@@ -101,7 +106,7 @@ $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libass.a: external/libass/configure $(DEPENDE
 	cd external/libass && \
 	PKG_CONFIG_PATH=$(DEPENDENCY_OUTPUT_DIRECTORY)/lib/pkgconfig \
 	./configure \
-		CFLAGS="-DFRIBIDI_LIB_STATIC" \
+		CFLAGS="-DFRIBIDI_LIB_STATIC -O2" \
 		--prefix="$(DEPENDENCY_OUTPUT_DIRECTORY)" \
 		--host=i686-w64-mingw32 \
 		--disable-shared \
