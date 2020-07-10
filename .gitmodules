@@ -1,0 +1,12 @@
+[submodule "external/freetype2"]
+	path = external/freetype2
+	url = https://git.savannah.gnu.org/git/freetype/freetype2.git
+	ignore = dirty
+[submodule "external/fribidi"]
+	path = external/fribidi
+	url = https://github.com/fribidi/fribidi.git
+	ignore = dirty
+[submodule "external/libass"]
+	path = external/libass
+	url = https://github.com/libass/libass.git
+	ignore = dirty

@@ -1,0 +1,34 @@
+/**
+ * Manual with pseudo-code
+ */
+class Layer
+{
+	/**
+	 * Load ASS track from storages
+	 * @param filename String path to ASS file in storage
+	 * @return Integer true if successful, false if not
+	 */
+	function load_ass_track(filename);
+
+	/**
+	 * Set the frame size of the libass renderer to the layer image size
+	 * @return Integer true if successful, false if not
+	 */
+	function ass_set_frame_size_to_image_size();
+
+	/**
+	 * Render subtitle on the layer
+	 * @param now Integer Timestamp of the subtitle to render in miliseconds
+	 * @param force_blit Integer Blit onto the layer even if there was no change
+	 * @return Integer 0 if there was no change, 1 if there was a position change, 2 if there was a content change
+	 */
+	function render_ass(now, force_blit);
+
+	/**
+	 * Determine offset of the next subtitle event
+	 * @param now Integer Timestamp of the subtitle in miliseconds
+	 * @param movement Integer How many events to skip
+	 * @return Integer Offset in miliseconds to the next event
+	 */
+	function step_ass(now, movement);
+};
