@@ -135,10 +135,8 @@ public:
 		{
 			if (force_blit)
 			{
-				last_rect.left = 0;
-				last_rect.top = 0;
-				last_rect.set_width(width);
-				last_rect.set_width(height);
+				last_rect.clear();
+				last_rect.set_size(width, height);
 			}
 			if (force_blit || !last_rect.is_empty())
 			{
