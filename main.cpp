@@ -97,6 +97,12 @@ public:
 			TVPAddLog(TJS_W("krass: could not get layer size"));
 			return false;
 		}
+		if (!LayerClear(self, 0, 0, width, height))
+		{
+			TVPAddLog(TJS_W("krass: could not clear layer"));
+			return false;
+		}
+		last_rect.clear();
 		ass_set_frame_size(ass_renderer, width, height);
 		ass_set_fonts(ass_renderer, nullptr, "sans-serif", ASS_FONTPROVIDER_NONE, nullptr, 1);
 		return true;
@@ -125,13 +131,23 @@ public:
 			TVPAddLog(TJS_W("krass: could not render ass image"));
 			return false;
 		}
-		tTVPRect rect = {0, 0, 0, 0};
 		if (force_blit || detect_change)
 		{
-			if (!LayerClear(self, 0, 0, width, height))
+			if (force_blit)
 			{
-				TVPAddLog(TJS_W("krass: could not clear layer"));
-				return false;
+				last_rect.left = 0;
+				last_rect.top = 0;
+				last_rect.set_width(width);
+				last_rect.set_width(height);
+			}
+			if (force_blit || !last_rect.is_empty())
+			{
+				if (!LayerClear(self, last_rect.left, last_rect.top, last_rect.get_width(), last_rect.get_height()))
+				{
+					TVPAddLog(TJS_W("krass: could not clear layer"));
+					return false;
+				}
+				last_rect.clear();
 			}
 			long pitch;
 			tjs_uint8* buffer;
@@ -140,12 +156,14 @@ public:
 				TVPAddLog(TJS_W("krass: could not get layer buffer"));
 				return false;
 			}
+			tTVPRect rect = {0, 0, 0, 0};
 			blend_tree(buffer, pitch, ass_image, &rect);
 			if (!LayerUpdate(self, rect.left, rect.top, rect.get_width(), rect.get_height()))
 			{
 				TVPAddLog(TJS_W("krass: could not update layer"));
 				return false;
 			}
+			last_rect = rect;
 		}
 		return detect_change;
 	}
@@ -171,6 +189,7 @@ private:
 	ASS_Renderer *ass_renderer = nullptr;
 	ASS_Image *ass_image = nullptr;
 	size_t width = 0, height = 0;
+	tTVPRect last_rect = {0, 0, 0, 0};
 
 	bool initialize_ass_library()
 	{
@@ -218,7 +237,14 @@ private:
 		container_rect.top = img->dst_y;
 		container_rect.set_width(img->w);
 		container_rect.set_height(img->h);
-		rect->do_union(container_rect);
+		if (rect->is_empty())
+		{
+			*rect = container_rect;
+		}
+		else
+		{
+			rect->do_union(container_rect);
+		}
 
 		tjs_uint8 opacity = 255 - _a(img->color);
 		tjs_uint8 r = _r(img->color);
