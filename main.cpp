@@ -273,11 +273,9 @@ private:
 
 	void blend_tree(tjs_uint8* buffer, long pitch, ASS_Image *img, tTVPRect *rect)
 	{
-		int cnt = 0;
 		while (img)
 		{
 			blend_single(buffer, pitch, img, rect);
-			cnt += 1;
 			img = img->next;
 		}
 	}
