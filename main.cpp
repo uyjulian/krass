@@ -39,8 +39,16 @@ public:
 		{
 			ass_image = nullptr;
 		}
+		if (self)
+		{
+			self->Release();
+		}
 	}
-	krass(iTJSDispatch2 *obj) : self(obj) {}
+	krass(iTJSDispatch2 *obj)
+	{
+		self = obj;
+		last_change = 0;
+	}
 
 	bool load_ass_track(ttstr filename)
 	{
@@ -126,42 +134,21 @@ public:
 		}
 		int detect_change = 0;
 		ass_image = ass_render_frame(ass_renderer, ass_track, now, &detect_change);
+		last_change = detect_change;
 		if (!ass_image)
 		{
 			TVPAddLog(TJS_W("krass: could not render ass image"));
 			return false;
 		}
-		if (force_blit || detect_change)
+		if (detect_change == 1)
 		{
-			if (force_blit)
-			{
-				last_rect.clear();
-				last_rect.set_size(width, height);
-			}
-			if (force_blit || !last_rect.is_empty())
-			{
-				if (!LayerClear(self, last_rect.left, last_rect.top, last_rect.get_width(), last_rect.get_height()))
-				{
-					TVPAddLog(TJS_W("krass: could not clear layer"));
-					return false;
-				}
-				last_rect.clear();
-			}
-			long pitch;
-			tjs_uint8* buffer;
-			if (!GetLayerImageForWrite(self, buffer, pitch))
-			{
-				TVPAddLog(TJS_W("krass: could not get layer buffer"));
-				return false;
-			}
-			tTVPRect rect = {0, 0, 0, 0};
-			blend_tree(buffer, pitch, ass_image, &rect);
-			if (!LayerUpdate(self, rect.left, rect.top, rect.get_width(), rect.get_height()))
-			{
-				TVPAddLog(TJS_W("krass: could not update layer"));
-				return false;
-			}
-			last_rect = rect;
+			tTJSVariant self_variant(self, self);
+			update_tree(self_variant, ass_image);
+		}
+		else if (detect_change == 2)
+		{
+			tTJSVariant self_variant(self, self);
+			create_tree(self_variant, ass_image);
 		}
 		return detect_change;
 	}
@@ -188,6 +175,7 @@ private:
 	ASS_Image *ass_image = nullptr;
 	size_t width = 0, height = 0;
 	tTVPRect last_rect = {0, 0, 0, 0};
+	int last_change = 0;
 
 	bool initialize_ass_library()
 	{
@@ -228,23 +216,64 @@ private:
 #define _b(c) (((c)>>8)&0xFF)
 #define _a(c) ((c)&0xFF)
 
-	void blend_single(tjs_uint8* buffer, long pitch, ASS_Image *img, tTVPRect *rect)
+	bool create_single(tTJSVariant parent, ASS_Image *img, tTJSVariant layer_obj)
 	{
-		tTVPRect container_rect;
-		container_rect.left = img->dst_x;
-		container_rect.top = img->dst_y;
-		container_rect.set_width(img->w);
-		container_rect.set_height(img->h);
-		if (rect->is_empty())
+		long layer_pitch;
+		tjs_uint8* layer_buffer;
 		{
-			*rect = container_rect;
-		}
-		else
-		{
-			rect->do_union(container_rect);
+			if (layer_obj.Type() != tvtObject)
+			{
+				tTJSVariant window_variant;
+				static ttstr window(TJS_W("window"));
+				parent.AsObjectNoAddRef()->PropGet(0, window.c_str(), window.GetHint(), &window_variant, parent);
+				tTJSVariant *vars[] = {&window_variant, &parent};
+
+				iTJSDispatch2 *layer_obj_dispatch;
+
+				if (TJS_SUCCEEDED(GetLayerClass()->CreateNew(0, NULL, NULL, &layer_obj_dispatch, 2, vars, NULL)))
+				{
+					layer_obj = tTJSVariant(layer_obj_dispatch, layer_obj_dispatch);
+					layer_obj_dispatch->Release();
+				}
+				else
+				{
+					return false;
+				}
+			}
+
+			if (!LayerSetImageSize(layer_obj, img->w, img->h))
+			{
+				return false;
+			}
+			if (!LayerSetImagePos(layer_obj, 0, 0))
+			{
+				return false;
+			}
+			if (!LayerSetPos(layer_obj, img->dst_x, img->dst_y, img->w, img->h))
+			{
+				return false;
+			}
+			if (!LayerClear(layer_obj, 0, 0, img->w, img->h))
+			{
+				return false;
+			}
+			if (!GetLayerImageForWrite(layer_obj, layer_buffer, layer_pitch))
+			{
+				return false;
+			}
+			static ttstr visible(TJS_W("visible"));
+			if (!LayerPropSet(layer_obj, visible, 1))
+			{
+				return false;
+			}
+			static ttstr opacity(TJS_W("opacity"));
+			if (!LayerPropSet(layer_obj, opacity, (tTVInteger)(255 - _a(img->color))))
+			{
+				return false;
+			}
 		}
 
-		tjs_uint8 opacity = 255 - _a(img->color);
+		tjs_uint8 a = 255 - _a(img->color);
 		tjs_uint8 r = _r(img->color);
 		tjs_uint8 g = _g(img->color);
 		tjs_uint8 b = _b(img->color);
@@ -253,28 +282,73 @@ private:
 		tjs_uint8 *dst;
 
 		src = img->bitmap;
-		dst = buffer + img->dst_y * pitch + img->dst_x * 4;
+		dst = layer_buffer;
 		for (tjs_int y = 0; y < img->h; y += 1)
 		{
 			for (tjs_int x = 0; x < img->w; x += 1)
 			{
-				tjs_uint32 k = ((tjs_uint32) src[x]) * opacity / 255;
-				dst[x * 4 + 0] = (k * b + (255 - k) * dst[x * 4 + 0]) / 255;
-				dst[x * 4 + 1] = (k * g + (255 - k) * dst[x * 4 + 1]) / 255;
-				dst[x * 4 + 2] = (k * r + (255 - k) * dst[x * 4 + 2]) / 255;
-				dst[x * 4 + 3] = (k * opacity + (255 - k) * dst[x * 4 + 3]) / 255;
+				dst[x * 4 + 0] = (src[x] * b) / 255;
+				dst[x * 4 + 1] = (src[x] * g) / 255;
+				dst[x * 4 + 2] = (src[x] * r) / 255;
+				dst[x * 4 + 3] = (src[x] * a) / 255;
 			}
 			src += img->stride;
-			dst += pitch;
+			dst += layer_pitch;
+		}
+
+		if (!LayerUpdate(layer_obj, 0, 0, img->w, img->h))
+		{
+			return false;
+		}
+
+		return true;
+	}
+
+	void create_tree(tTJSVariant parent, ASS_Image *img)
+	{
+		tTJSVariant * children_array = GetLayerChildren(parent);
+		if (children_array != nullptr)
+		{
+			for (int i = 0; children_array[i].Type() == tvtObject; i += 1)
+			{
+				if (img)
+				{
+					create_single(parent, img, children_array[i]);
+					img = img->next;
+				}
+				else
+				{
+					static ttstr visible(TJS_W("visible"));
+					LayerPropSet(children_array[i], visible, 0);
+				}
+			}
+			delete[] children_array;
+		}
+		while (img)
+		{
+			tTJSVariant empty;
+			create_single(parent, img, empty);
+			img = img->next;
 		}
 	}
 
-	void blend_tree(tjs_uint8* buffer, long pitch, ASS_Image *img, tTVPRect *rect)
+	void update_tree(tTJSVariant parent, ASS_Image *img)
 	{
-		while (img)
+		tTJSVariant * children_array = GetLayerChildren(parent);
+		if (children_array != nullptr)
 		{
-			blend_single(buffer, pitch, img, rect);
-			img = img->next;
+			for (int i = 0; children_array[i].Type() == tvtObject; i += 1)
+			{
+				if (img)
+				{
+					if (!LayerSetPos(children_array[i], img->dst_x, img->dst_y, img->w, img->h))
+					{
+						break;
+					}
+					img = img->next;
+				}
+			}
+			delete[] children_array;
 		}
 	}
 
@@ -292,6 +366,48 @@ private:
 	}
 
 	static iTJSDispatch2 *LayerClass;
+	static iTJSDispatch2 * GetLayerClass(void)
+	{
+		if (!LayerClass) {
+			tTJSVariant var;
+			TVPExecuteExpression(TJS_W("Layer"), &var);
+			LayerClass = var.AsObjectNoAddRef();
+		}
+		return LayerClass;
+	}
+	static tTJSVariant * GetLayerChildren(iTJSDispatch2 *lay)
+	{
+		iTJSDispatch2 * layer_class = GetLayerClass();
+		tTJSVariant layer_children_variant;
+		tTJSVariant val;
+		static ttstr children(TJS_W("children"));
+		if (TJS_FAILED(layer_class->PropGet(0, children.c_str(), children.GetHint(), &layer_children_variant, lay)))
+		{
+			return nullptr;
+		}
+		static ttstr count(TJS_W("count"));
+		tTJSVariant arr_count_variant;
+		if (TJS_FAILED(layer_children_variant.AsObjectNoAddRef()->PropGet(0, count.c_str(), count.GetHint(), &arr_count_variant, layer_children_variant)))
+		{
+			return nullptr;
+		}
+		if (arr_count_variant.AsInteger() == 0)
+		{
+			return nullptr;
+		}
+		tTJSVariant * children_array = new tTJSVariant[arr_count_variant.AsInteger() + 1];
+		for (size_t i = 0; i < arr_count_variant.AsInteger(); i += 1)
+		{
+			tTJSVariant child_variant;
+			if (TJS_FAILED(layer_children_variant.AsObjectNoAddRef()->PropGetByNum(0, i, &child_variant, layer_children_variant)))
+			{
+				delete[] children_array;
+				return nullptr;
+			}
+			children_array[i] = child_variant;
+		}
+		return children_array;
+	}
 	static bool GetLayerSize(iTJSDispatch2 *lay, size_t &w, size_t &h)
 	{
 		static ttstr hasImage   (TJS_W("hasImage"));
@@ -332,11 +448,7 @@ private:
 	}
 	static bool LayerClear(iTJSDispatch2 *lay, tjs_int64 left = 0, tjs_int64 top = 0, tjs_int64 width = 0, tjs_int64 height = 0)
 	{
-		if (!LayerClass) {
-			tTJSVariant var;
-			TVPExecuteExpression(TJS_W("Layer"), &var);
-			LayerClass = var.AsObjectNoAddRef();
-		}
+		static ttstr fillRect(TJS_W("fillRect"));
 		tTJSVariant val[5];
 		tTJSVariant *pval[5] = { val, val + 1, val + 2, val + 3, val + 4 };
 		val[0] = left;
@@ -344,34 +456,61 @@ private:
 		val[2] = width;
 		val[3] = height;
 		val[4] = 0;
-		static tjs_uint32 update_hint = 0;
-		return (TJS_SUCCEEDED(LayerClass->FuncCall(0, TJS_W("fillRect"), &update_hint, NULL, 5, pval, lay)));
+		return (TJS_SUCCEEDED(GetLayerClass()->FuncCall(0, fillRect.c_str(), fillRect.GetHint(), NULL, 5, pval, lay)));
+	}
+	static bool LayerSetPos(iTJSDispatch2 *lay, tjs_int64 left = 0, tjs_int64 top = 0, tjs_int64 width = 0, tjs_int64 height = 0)
+	{
+		static ttstr setPos(TJS_W("setPos"));
+		tTJSVariant val[4];
+		tTJSVariant *pval[4] = { val, val + 1, val + 2, val + 3};
+		val[0] = left;
+		val[1] = top;
+		val[2] = width;
+		val[3] = height;
+		return (TJS_SUCCEEDED(GetLayerClass()->FuncCall(0, setPos.c_str(), setPos.GetHint(), NULL, 4, pval, lay)));
+	}
+	static bool LayerSetImageSize(iTJSDispatch2 *lay, tjs_int64 width = 0, tjs_int64 height = 0)
+	{
+		static ttstr setImageSize(TJS_W("setImageSize"));
+		tTJSVariant val[2];
+		tTJSVariant *pval[2] = { val, val + 1};
+		val[0] = width;
+		val[1] = height;
+		return (TJS_SUCCEEDED(GetLayerClass()->FuncCall(0, setImageSize.c_str(), setImageSize.GetHint(), NULL, 2, pval, lay)));
+	}
+	static bool LayerSetImagePos(iTJSDispatch2 *lay, tjs_int64 left = 0, tjs_int64 top = 0)
+	{
+		static ttstr setImagePos(TJS_W("setImagePos"));
+		tTJSVariant val[2];
+		tTJSVariant *pval[2] = { val, val + 1};
+		val[0] = left;
+		val[1] = top;
+		return (TJS_SUCCEEDED(GetLayerClass()->FuncCall(0, setImagePos.c_str(), setImagePos.GetHint(), NULL, 2, pval, lay)));
+	}
+	static bool LayerSetSizeToImageSize(iTJSDispatch2 *lay)
+	{
+		static ttstr setSizeToImageSize(TJS_W("setSizeToImageSize"));
+		return (TJS_SUCCEEDED(GetLayerClass()->FuncCall(0, setSizeToImageSize.c_str(), setSizeToImageSize.GetHint(), NULL, 0, NULL, lay)));
 	}
 	static bool LayerUpdate(iTJSDispatch2 *lay, tjs_int64 left = 0, tjs_int64 top = 0, tjs_int64 width = 0, tjs_int64 height = 0)
 	{
-		if (!LayerClass) {
-			tTJSVariant var;
-			TVPExecuteExpression(TJS_W("Layer"), &var);
-			LayerClass = var.AsObjectNoAddRef();
-		}
+		static ttstr update(TJS_W("update"));
 		tTJSVariant val[4];
 		tTJSVariant *pval[4] = { val, val + 1, val + 2, val + 3 };
 		val[0] = left;
 		val[1] = top;
 		val[2] = width;
 		val[3] = height;
-		static tjs_uint32 update_hint = 0;
-		return (TJS_SUCCEEDED(LayerClass->FuncCall(0, TJS_W("update"), &update_hint, NULL, 4, pval, lay)));
+		return (TJS_SUCCEEDED(GetLayerClass()->FuncCall(0, update.c_str(), update.GetHint(), NULL, 4, pval, lay)));
 	}
 	static tTVInteger LayerPropGet(iTJSDispatch2 *lay, ttstr &prop, tTVInteger defval = 0)
 	{
-		if (!LayerClass) {
-			tTJSVariant var;
-			TVPExecuteExpression(TJS_W("Layer"), &var);
-			LayerClass = var.AsObjectNoAddRef();
-		}
 		tTJSVariant val;
-		return (TJS_FAILED(LayerClass->PropGet(0, prop.c_str(), prop.GetHint(), &val, lay))) ? defval : val.AsInteger();
+		return (TJS_FAILED(GetLayerClass()->PropGet(0, prop.c_str(), prop.GetHint(), &val, lay))) ? defval : val.AsInteger();
+	}
+	static bool LayerPropSet(iTJSDispatch2 *lay, ttstr &prop, tTJSVariant val)
+	{
+		return (TJS_SUCCEEDED(GetLayerClass()->PropSet(TJS_MEMBERENSURE, prop.c_str(), prop.GetHint(), &val, lay)));
 	}
 };
 iTJSDispatch2* krass::LayerClass = 0;
