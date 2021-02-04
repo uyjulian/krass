@@ -266,11 +266,6 @@ private:
 			{
 				return false;
 			}
-			static ttstr opacity(TJS_W("opacity"));
-			if (!LayerPropSet(layer_obj, opacity, (tTVInteger)(255 - _a(img->color))))
-			{
-				return false;
-			}
 		}
 
 		tjs_uint8 a = 255 - _a(img->color);
