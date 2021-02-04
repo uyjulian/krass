@@ -47,7 +47,6 @@ public:
 	krass(iTJSDispatch2 *obj)
 	{
 		self = obj;
-		last_change = 0;
 	}
 
 	bool load_ass_track(ttstr filename)
@@ -110,7 +109,6 @@ public:
 			TVPAddLog(TJS_W("krass: could not clear layer"));
 			return false;
 		}
-		last_rect.clear();
 		ass_set_frame_size(ass_renderer, width, height);
 		ass_set_fonts(ass_renderer, nullptr, "sans-serif", ASS_FONTPROVIDER_NONE, nullptr, 1);
 		return true;
@@ -134,7 +132,6 @@ public:
 		}
 		int detect_change = 0;
 		ass_image = ass_render_frame(ass_renderer, ass_track, now, &detect_change);
-		last_change = detect_change;
 		if (!ass_image)
 		{
 			TVPAddLog(TJS_W("krass: could not render ass image"));
@@ -174,8 +171,6 @@ private:
 	ASS_Renderer *ass_renderer = nullptr;
 	ASS_Image *ass_image = nullptr;
 	size_t width = 0, height = 0;
-	tTVPRect last_rect = {0, 0, 0, 0};
-	int last_change = 0;
 
 	bool initialize_ass_library()
 	{
@@ -374,7 +369,6 @@ private:
 	{
 		iTJSDispatch2 * layer_class = GetLayerClass();
 		tTJSVariant layer_children_variant;
-		tTJSVariant val;
 		static ttstr children(TJS_W("children"));
 		if (TJS_FAILED(layer_class->PropGet(0, children.c_str(), children.GetHint(), &layer_children_variant, lay)))
 		{
