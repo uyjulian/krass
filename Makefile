@@ -1,6 +1,6 @@
 #############################################
 ##                                         ##
-##    Copyright (C) 2020-2020 Julian Uy    ##
+##    Copyright (C) 2020-2021 Julian Uy    ##
 ##  https://sites.google.com/site/awertyb  ##
 ##                                         ##
 ##   See details of license at "LICENSE"   ##
@@ -8,50 +8,17 @@
 #############################################
 
 DEPENDENCY_OUTPUT_DIRECTORY := $(realpath build-libraries)
-CC = i686-w64-mingw32-gcc
-CXX = i686-w64-mingw32-g++
-WINDRES := i686-w64-mingw32-windres
-GIT_TAG := $(shell git describe --abbrev=0 --tags)
-INCFLAGS += -I. -I.. -I../ncbind -I$(DEPENDENCY_OUTPUT_DIRECTORY)/include
-ALLSRCFLAGS += $(INCFLAGS) -DGIT_TAG=\"$(GIT_TAG)\"
-CFLAGS += -O2 -flto
-CFLAGS += $(ALLSRCFLAGS) -Wall -Wno-unused-value -Wno-format -DNDEBUG -DWIN32 -D_WIN32 -D_WINDOWS 
-CFLAGS += -D_USRDLL -DMINGW_HAS_SECURE_API -DUNICODE -D_UNICODE -DNO_STRICT
-CXXFLAGS += $(CFLAGS) -fpermissive
-WINDRESFLAGS += $(ALLSRCFLAGS) --codepage=65001
-LDFLAGS += -static -static-libstdc++ -static-libgcc -shared -Wl,--kill-at
-LDLIBS +=
 
-%.o: %.c
-	@printf '\t%s %s\n' CC $<
-	$(CC) -c $(CFLAGS) -o $@ $<
+SOURCES += main.cpp
+SOURCES += $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libass.a $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libfribidi.a $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libfreetype.a
+INCFLAGS += -I$(DEPENDENCY_OUTPUT_DIRECTORY)/include
+PROJECT_BASENAME = krass
 
-%.o: %.cpp
-	@printf '\t%s %s\n' CXX $<
-	$(CXX) -c $(CXXFLAGS) -o $@ $<
+RC_FILEDESCRIPTION ?= Advanced Substation Alpha renderer for TVP(KIRIKIRI) (2/Z)
+RC_LEGALCOPYRIGHT ?= Copyright (C) 2020-2021 Julian Uy; This product is licensed under the MIT license.
+RC_PRODUCTNAME ?= Advanced Substation Alpha renderer for TVP(KIRIKIRI) (2/Z)
 
-%.o: %.rc
-	@printf '\t%s %s\n' WINDRES $<
-	$(WINDRES) $(WINDRESFLAGS) $< $@
-
-SOURCES := ../tp_stub.cpp ../ncbind/ncbind.cpp main.cpp krass.rc
-OBJECTS := $(SOURCES:.c=.o)
-OBJECTS := $(OBJECTS:.cpp=.o)
-OBJECTS := $(OBJECTS:.rc=.o)
-OBJECTS += $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libass.a $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libfribidi.a $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libfreetype.a
-
-BINARY ?= krass.dll
-ARCHIVE ?= krass.$(GIT_TAG).7z
-
-all: $(BINARY)
-
-archive: $(ARCHIVE)
-
-clean:
-	rm -f $(OBJECTS) $(BINARY) $(ARCHIVE)
-	$(MAKE) -C external/fribidi clean
-	$(MAKE) -C external/freetype2 clean
-	$(MAKE) -C external/libass clean
+include external/ncbind/Rules.lib.make
 
 $(DEPENDENCY_OUTPUT_DIRECTORY):
 	mkdir $(DEPENDENCY_OUTPUT_DIRECTORY)
@@ -122,11 +89,7 @@ $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libass.a: external/libass/configure $(DEPENDE
 	$(MAKE) && \
 	$(MAKE) install
 
-$(ARCHIVE): $(BINARY)
-	rm -f $(ARCHIVE)
-	7z a $@ $^
-
-$(BINARY): $(OBJECTS) 
-	@printf '\t%s %s\n' LNK $@
-	$(CXX) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS)
-
+clean::
+	$(MAKE) -C external/fribidi clean
+	$(MAKE) -C external/freetype2 clean
+	$(MAKE) -C external/libass clean
