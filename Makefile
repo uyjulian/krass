@@ -7,7 +7,7 @@
 ##                                         ##
 #############################################
 
-DEPENDENCY_OUTPUT_DIRECTORY := $(realpath build-libraries)
+DEPENDENCY_OUTPUT_DIRECTORY := $(shell realpath build-libraries)
 
 SOURCES += main.cpp
 SOURCES += $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libass.a $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libfribidi.a $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libfreetype.a
@@ -21,7 +21,7 @@ RC_PRODUCTNAME ?= Advanced Substation Alpha renderer for TVP(KIRIKIRI) (2/Z)
 include external/ncbind/Rules.lib.make
 
 $(DEPENDENCY_OUTPUT_DIRECTORY):
-	mkdir $(DEPENDENCY_OUTPUT_DIRECTORY)
+	mkdir -p $(DEPENDENCY_OUTPUT_DIRECTORY)
 
 external/fribidi/configure:
 	cd external/fribidi && \
