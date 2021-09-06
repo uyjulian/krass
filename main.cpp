@@ -132,11 +132,6 @@ public:
 		}
 		int detect_change = 0;
 		ass_image = ass_render_frame(ass_renderer, ass_track, now, &detect_change);
-		if (!ass_image)
-		{
-			TVPAddLog(TJS_W("krass: could not render ass image"));
-			return false;
-		}
 		if (detect_change == 1)
 		{
 			tTJSVariant self_variant(self, self);
