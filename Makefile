@@ -7,11 +7,8 @@
 ##                                         ##
 #############################################
 
-DEPENDENCY_OUTPUT_DIRECTORY := $(shell realpath build-libraries)
-
-SOURCES += main.cpp
-SOURCES += $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libass.a $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libfribidi.a $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libfreetype.a
-INCFLAGS += -I$(DEPENDENCY_OUTPUT_DIRECTORY)/include
+BASESOURCES += main.cpp
+SOURCES += $(BASESOURCES)
 PROJECT_BASENAME = krass
 
 RC_FILEDESCRIPTION ?= Advanced Substation Alpha renderer for TVP(KIRIKIRI) (2/Z)
@@ -19,6 +16,17 @@ RC_LEGALCOPYRIGHT ?= Copyright (C) 2020-2021 Julian Uy; This product is licensed
 RC_PRODUCTNAME ?= Advanced Substation Alpha renderer for TVP(KIRIKIRI) (2/Z)
 
 include external/ncbind/Rules.lib.make
+
+DEPENDENCY_OUTPUT_DIRECTORY := $(shell realpath build-libraries)-$(TARGET_ARCH)
+
+EXTLIBS += $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libass.a $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libfribidi.a $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libfreetype.a
+SOURCES += $(EXTLIBS)
+OBJECTS += $(EXTLIBS)
+LDLIBS += $(EXTLIBS)
+
+INCFLAGS += -I$(DEPENDENCY_OUTPUT_DIRECTORY)/include
+
+$(BASESOURCES): $(EXTLIBS)
 
 $(DEPENDENCY_OUTPUT_DIRECTORY):
 	mkdir -p $(DEPENDENCY_OUTPUT_DIRECTORY)
@@ -34,7 +42,7 @@ $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libfribidi.a: external/fribidi/configure $(DE
 	./configure \
 		CFLAGS="-O2" \
 		--prefix="$(DEPENDENCY_OUTPUT_DIRECTORY)" \
-		--host=i686-w64-mingw32 \
+		--host=$(patsubst %-,%,$(TOOL_TRIPLET_PREFIX)) \
 		--enable-static \
 		--disable-shared \
 		--disable-dependency-tracking \
@@ -51,7 +59,7 @@ $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libfreetype.a: $(DEPENDENCY_OUTPUT_DIRECTORY)
 	./configure \
 		CFLAGS="-O2" \
 		--prefix="$(DEPENDENCY_OUTPUT_DIRECTORY)" \
-		--host=i686-w64-mingw32 \
+		--host=$(patsubst %-,%,$(TOOL_TRIPLET_PREFIX)) \
 		--enable-static \
 		--disable-shared \
 		\
@@ -75,7 +83,7 @@ $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libass.a: external/libass/configure $(DEPENDE
 	./configure \
 		CFLAGS="-DFRIBIDI_LIB_STATIC -O2" \
 		--prefix="$(DEPENDENCY_OUTPUT_DIRECTORY)" \
-		--host=i686-w64-mingw32 \
+		--host=$(patsubst %-,%,$(TOOL_TRIPLET_PREFIX)) \
 		--disable-shared \
 		--enable-static \
 		--disable-asm \
