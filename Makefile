@@ -17,6 +17,15 @@ RC_PRODUCTNAME ?= Advanced Substation Alpha renderer for TVP(KIRIKIRI) (2/Z)
 
 include external/ncbind/Rules.lib.make
 
+DEPENDENCY_BUILD_DIRECTORY := build-$(TARGET_ARCH)
+DEPENDENCY_BUILD_DIRECTORY_FRIBIDI := $(DEPENDENCY_BUILD_DIRECTORY)/fribidi
+DEPENDENCY_BUILD_DIRECTORY_FREETYPE2 := $(DEPENDENCY_BUILD_DIRECTORY)/freetype2
+DEPENDENCY_BUILD_DIRECTORY_LIBASS := $(DEPENDENCY_BUILD_DIRECTORY)/libass
+
+FRIBIDI_PATH := $(realpath external/fribidi)
+FREETYPE2_PATH := $(realpath external/freetype2)
+LIBASS_PATH := $(realpath external/libass)
+
 DEPENDENCY_OUTPUT_DIRECTORY := $(shell realpath build-libraries)-$(TARGET_ARCH)
 
 EXTLIBS += $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libass.a $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libfribidi.a $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libfreetype.a
@@ -31,15 +40,16 @@ $(BASESOURCES): $(EXTLIBS)
 $(DEPENDENCY_OUTPUT_DIRECTORY):
 	mkdir -p $(DEPENDENCY_OUTPUT_DIRECTORY)
 
-external/fribidi/configure:
-	cd external/fribidi && \
+$(FRIBIDI_PATH)/configure:
+	cd $(FRIBIDI_PATH) && \
 	git reset --hard && \
 	NOCONFIGURE=1 ./autogen.sh
 
-$(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libfribidi.a: external/fribidi/configure $(DEPENDENCY_OUTPUT_DIRECTORY)
-	cd external/fribidi && \
+$(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libfribidi.a: $(FRIBIDI_PATH)/configure $(DEPENDENCY_OUTPUT_DIRECTORY)
+	mkdir -p $(DEPENDENCY_BUILD_DIRECTORY_FRIBIDI) && \
+	cd $(DEPENDENCY_BUILD_DIRECTORY_FRIBIDI) && \
 	PKG_CONFIG_PATH=$(DEPENDENCY_OUTPUT_DIRECTORY)/lib/pkgconfig \
-	./configure \
+	$(FRIBIDI_PATH)/configure \
 		CFLAGS="-O2" \
 		--prefix="$(DEPENDENCY_OUTPUT_DIRECTORY)" \
 		--host=$(patsubst %-,%,$(TOOL_TRIPLET_PREFIX)) \
@@ -51,12 +61,16 @@ $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libfribidi.a: external/fribidi/configure $(DE
 	$(MAKE) && \
 	$(MAKE) install
 
-$(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libfreetype.a: $(DEPENDENCY_OUTPUT_DIRECTORY)
-	cd external/freetype2 && \
+$(FREETYPE2_PATH)/configure:
+	cd $(FREETYPE2_PATH) && \
 	git reset --hard && \
-	NOCONFIGURE=1 ./autogen.sh && \
+	NOCONFIGURE=1 ./autogen.sh
+
+$(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libfreetype.a: $(FREETYPE2_PATH)/configure $(DEPENDENCY_OUTPUT_DIRECTORY)
+	mkdir -p $(DEPENDENCY_BUILD_DIRECTORY_FREETYPE2) && \
+	cd $(DEPENDENCY_BUILD_DIRECTORY_FREETYPE2) && \
 	PKG_CONFIG_PATH=$(DEPENDENCY_OUTPUT_DIRECTORY)/lib/pkgconfig \
-	./configure \
+	$(FREETYPE2_PATH)/configure \
 		CFLAGS="-O2" \
 		--prefix="$(DEPENDENCY_OUTPUT_DIRECTORY)" \
 		--host=$(patsubst %-,%,$(TOOL_TRIPLET_PREFIX)) \
@@ -72,15 +86,16 @@ $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libfreetype.a: $(DEPENDENCY_OUTPUT_DIRECTORY)
 	$(MAKE) && \
 	$(MAKE) install
 
-external/libass/configure:
-	cd external/libass && \
+$(LIBASS_PATH)/configure:
+	cd $(LIBASS_PATH) && \
 	git reset --hard && \
 	NOCONFIGURE=1 ./autogen.sh
 
-$(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libass.a: external/libass/configure $(DEPENDENCY_OUTPUT_DIRECTORY) $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libfribidi.a $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libfreetype.a
-	cd external/libass && \
+$(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libass.a: $(LIBASS_PATH)/configure $(DEPENDENCY_OUTPUT_DIRECTORY) $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libfribidi.a $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libfreetype.a
+	mkdir -p $(DEPENDENCY_BUILD_DIRECTORY_LIBASS) && \
+	cd $(DEPENDENCY_BUILD_DIRECTORY_LIBASS) && \
 	PKG_CONFIG_PATH=$(DEPENDENCY_OUTPUT_DIRECTORY)/lib/pkgconfig \
-	./configure \
+	$(LIBASS_PATH)/configure \
 		CFLAGS="-DFRIBIDI_LIB_STATIC -O2" \
 		--prefix="$(DEPENDENCY_OUTPUT_DIRECTORY)" \
 		--host=$(patsubst %-,%,$(TOOL_TRIPLET_PREFIX)) \
@@ -98,6 +113,4 @@ $(DEPENDENCY_OUTPUT_DIRECTORY)/lib/libass.a: external/libass/configure $(DEPENDE
 	$(MAKE) install
 
 clean::
-	$(MAKE) -C external/fribidi clean
-	$(MAKE) -C external/freetype2 clean
-	$(MAKE) -C external/libass clean
+	rm -rf $(DEPENDENCY_BUILD_DIRECTORY) $(DEPENDENCY_OUTPUT_DIRECTORY)
