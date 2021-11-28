@@ -13,3 +13,11 @@
 [submodule "external/ncbind"]
 	path = external/ncbind
 	url = https://github.com/uyjulian/ncbind.git
+[submodule "external/brotli"]
+	path = external/brotli
+	url = https://github.com/google/brotli.git
+	ignore = dirty
+[submodule "external/harfbuzz"]
+	path = external/harfbuzz
+	url = https://github.com/harfbuzz/harfbuzz.git
+	ignore = dirty
