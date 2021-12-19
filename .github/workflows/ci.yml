@@ -30,7 +30,7 @@ jobs:
       - run: sudo apt-get install build-essential mingw-w64 nasm
       - run: sudo update-alternatives --set i686-w64-mingw32-gcc /usr/bin/i686-w64-mingw32-gcc-posix
       - run: sudo update-alternatives --set i686-w64-mingw32-g++ /usr/bin/i686-w64-mingw32-g++-posix
-      - run: make TARGET_ARCH=intel32 archive -j
+      - run: make TARGET_ARCH=intel32 archive -j$(getconf _NPROCESSORS_ONLN)
       - uses: actions/upload-artifact@master
         with:
           name: binary-win32-intel32-gcc
@@ -46,7 +46,7 @@ jobs:
       - run: sudo apt-get install build-essential mingw-w64 nasm
       - run: sudo update-alternatives --set x86_64-w64-mingw32-gcc /usr/bin/x86_64-w64-mingw32-gcc-posix
       - run: sudo update-alternatives --set x86_64-w64-mingw32-g++ /usr/bin/x86_64-w64-mingw32-g++-posix
-      - run: make TARGET_ARCH=intel64 archive -j
+      - run: make TARGET_ARCH=intel64 archive -j$(getconf _NPROCESSORS_ONLN)
       - uses: actions/upload-artifact@master
         with:
           name: binary-win32-intel64-gcc
