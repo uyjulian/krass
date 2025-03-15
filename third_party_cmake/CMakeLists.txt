@@ -42,6 +42,7 @@ string(REGEX REPLACE "-$" "" TOOL_TRIPLET_PREFIX_NOTRAILINGDASH "${TOOL_TRIPLET_
 include(ExternalProject)
 ExternalProject_Add(fribidi-build
     URL https://github.com/fribidi/fribidi/releases/download/v1.0.11/fribidi-1.0.11.tar.xz
+    URL_HASH SHA256=30f93e9c63ee627d1a2cedcf59ac34d45bf30240982f99e44c6e015466b4e73d
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env
 		"PKG_CONFIG_PATH=${DEPENDENCY_OUTPUT_DIRECTORY}/lib/pkgconfig"
@@ -61,6 +62,7 @@ list(APPEND THIRDPARTY_DEPENDS fribidi-build)
 
 ExternalProject_Add(brotli-build
     URL https://github.com/google/brotli/archive/refs/tags/v1.0.9.tar.gz
+    URL_HASH SHA256=f9e8d81d0405ba66d181529af42a3354f838c939095ff99930da6aa9cdf6fe46
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     CONFIGURE_COMMAND 
     	bash -c "cd <SOURCE_DIR> && NOCONFIGURE=1 ./bootstrap" &&
@@ -82,6 +84,7 @@ list(APPEND THIRDPARTY_DEPENDS brotli-build)
 
 ExternalProject_Add(freetype-build-nohb
     URL https://download.savannah.gnu.org/releases/freetype/freetype-2.11.0.tar.xz
+    URL_HASH SHA256=8bee39bd3968c4804b70614a0a3ad597299ad0e824bc8aad5ce8aaf48067bde7
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     CONFIGURE_COMMAND 
     	${CMAKE_COMMAND} -E env
@@ -107,6 +110,7 @@ ExternalProject_Add(freetype-build-nohb
 ExternalProject_Add(harfbuzz-build
 	DEPENDS freetype-build-nohb
     URL https://github.com/harfbuzz/harfbuzz/releases/download/3.1.2/harfbuzz-3.1.2.tar.xz
+    URL_HASH SHA256=4056b1541dd8bbd8ec29207fe30e568805c0705515632d7fec53a94399bc7945
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     CONFIGURE_COMMAND 
         ${CMAKE_COMMAND} -E env
@@ -134,6 +138,7 @@ list(APPEND THIRDPARTY_DEPENDS harfbuzz-build)
 ExternalProject_Add(freetype-build
 	DEPENDS harfbuzz-build brotli-build
     URL https://download.savannah.gnu.org/releases/freetype/freetype-2.11.0.tar.xz
+    URL_HASH SHA256=8bee39bd3968c4804b70614a0a3ad597299ad0e824bc8aad5ce8aaf48067bde7
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     CONFIGURE_COMMAND 
         ${CMAKE_COMMAND} -E env
@@ -159,6 +164,7 @@ list(APPEND THIRDPARTY_DEPENDS freetype-build)
 ExternalProject_Add(libass-build
 	DEPENDS fribidi-build freetype-build harfbuzz-build
     URL https://github.com/libass/libass/releases/download/0.15.2/libass-0.15.2.tar.xz
+    URL_HASH SHA256=1be2df9c4485a57d78bb18c0a8ed157bc87a5a8dd48c661961c625cb112832fd
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     CONFIGURE_COMMAND 
         ${CMAKE_COMMAND} -E env
