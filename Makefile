@@ -7,8 +7,7 @@
 ##                                         ##
 #############################################
 
-BASESOURCES += main.cpp
-SOURCES += $(BASESOURCES)
+SOURCES += main.cpp
 PROJECT_BASENAME = krass
 
 RC_FILEDESCRIPTION ?= Advanced Substation Alpha renderer for TVP(KIRIKIRI) (2/Z)
