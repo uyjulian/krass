@@ -4,7 +4,7 @@
 class Layer
 {
 	/**
-	 * Load ASS track from storages
+	 * Load ASS track from storages. External resource files, such as font files, cannot be used.
 	 * @param filename String path to ASS file in storage
 	 * @return Integer true if successful, false if not
 	 */
